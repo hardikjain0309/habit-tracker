@@ -1,11 +1,9 @@
-Languages: JS, Go
+DB Engine: Postgres
+
+Languages:
+- Front-end: JS
+- Back-end: Go
 
 Frameworks:
 - Front-end: React
-- API: Gin
-
-API Design:
-- CREATE Habit Log
-- LIST Habit Logs
-- UPDATE Habit Log
-
+- Back-end: Gin

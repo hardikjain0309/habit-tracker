@@ -4,6 +4,6 @@ export interface HabitValue {
 }
 
 export interface HabitLog {
-  Habits: Array<HabitValue>
-  CreatedDateTime: number
+  HabitValues: Array<HabitValue>
+  CreatedDateTime: string
 }

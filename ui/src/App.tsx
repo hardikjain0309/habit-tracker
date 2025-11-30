@@ -15,7 +15,7 @@ function App() {
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
   const [habitValues, setHabitValues] = useState<{[ key: number ]: string | boolean }>({});
   const [isListLoading, setIsListLoading] = useState(false);
-  const currentHabitLogTime = useRef<number|null>(null);
+  const currentHabitLogTime = useRef<string>(null);
   const [saving, setSaving] = useState(false);
   const loadHabitLogs = async () => {
     setIsListLoading(true);
@@ -24,10 +24,8 @@ function App() {
       setHabitLogs(habitsLogsRes.data as HabitLog[]);
       if (habitsLogsRes.data?.length) {
         const todaysDate = new Date().toDateString();
-        console.log("today: ", todaysDate);
         const currentHabitLog = habitsLogsRes.data.find((habitLog) => {
-          const habitLogDate = new Date(habitLog.CreatedDateTime * 1000).toDateString();
-          console.log("date: ", habitLogDate);
+          const habitLogDate = new Date(habitLog.CreatedDateTime?.split("T")[0] || "").toDateString();
           return habitLogDate === todaysDate;
         });
         const defaultHabitValues: { [ key: number ]: string | boolean } = {};
@@ -39,7 +37,7 @@ function App() {
         })
         if (currentHabitLog) {
           currentHabitLogTime.current = currentHabitLog.CreatedDateTime;
-          const habitValues = currentHabitLog.Habits;
+          const habitValues = currentHabitLog.HabitValues;
           Habits.forEach(habit => {
             const habitValue = habitValues.find((habitValue) => habitValue.Id === habit);
             if (NumberTypeHabits.includes(habit)) {
@@ -79,12 +77,12 @@ function App() {
     try {
       if (currentHabitLogTime.current) {
         await axios.put("/habitlogs/update", {
-          Habits: habitValues,
+          HabitValues: habitValues,
           CreatedDateTime: currentHabitLogTime.current
         })
       } else {
         await axios.post("/habitlogs/add", {
-          Habits: habitValues
+          HabitValues: habitValues
         })
       }
     } catch {
