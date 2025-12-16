@@ -15,7 +15,6 @@ function App() {
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
   const [habitValues, setHabitValues] = useState<{[ key: number ]: string | boolean }>({});
   const [isListLoading, setIsListLoading] = useState(false);
-  const currentHabitLogTime = useRef<string>(null);
   const [saving, setSaving] = useState(false);
   const loadHabitLogs = async () => {
     setIsListLoading(true);
@@ -36,7 +35,6 @@ function App() {
           defaultHabitValues[habit] = false;
         })
         if (currentHabitLog) {
-          currentHabitLogTime.current = currentHabitLog.CreatedDateTime;
           const habitValues = currentHabitLog.HabitValues;
           Habits.forEach(habit => {
             const habitValue = habitValues.find((habitValue) => habitValue.Id === habit);
@@ -75,16 +73,9 @@ function App() {
     setSaving(true);
     const habitValues = formatFormValuesToHabits()
     try {
-      if (currentHabitLogTime.current) {
-        await axios.put("/habitlogs/update", {
-          HabitValues: habitValues,
-          CreatedDateTime: currentHabitLogTime.current
-        })
-      } else {
-        await axios.post("/habitlogs/add", {
-          HabitValues: habitValues
-        })
-      }
+      await axios.put("/habitlogs/update", {
+        HabitValues: habitValues
+      })
     } catch {
 
     } finally {

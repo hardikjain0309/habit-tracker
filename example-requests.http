@@ -3,20 +3,6 @@
 
 ###
 
-POST {{base_url}}/habitlogs/add
-Content-Type: application/json
-
-{
-  "HabitValues": [
-    {
-      "Id": 4,
-      "Value": "5"
-    }
-  ]
-}
-
-###
-
 GET {{base_url}}/habitlogs/list
 
 ###
@@ -27,8 +13,8 @@ Content-Type: application/json
 {
   "HabitValues": [
     {
-      "Id": 4,
-      "Value": "8"
+      "Id": 2,
+      "Value": "5"
     }
   ],
   "CreatedDateTime": "2025-11-30T21:33:35.50701Z"
