@@ -6,7 +6,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 
-export class SignUpRequestDto {
+export class SignupRequestDto {
   @IsNotEmpty()
   name!: string;
   @IsNotEmpty()
@@ -15,6 +15,10 @@ export class SignUpRequestDto {
   @IsNotEmpty()
   @IsString()
   password!: string;
+}
+
+export class SignupResponseDto {
+  userId!: string;
 }
 
 export class TokenRequestDto {
@@ -35,4 +39,10 @@ export class TokenRequestDto {
   @IsNotEmpty()
   @IsString()
   refreshToken?: string;
+}
+
+export class TokenResponseDto {
+  accessToken!: string;
+  refreshToken!: string;
+  expiresAt!: Date;
 }

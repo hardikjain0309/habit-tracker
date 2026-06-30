@@ -1,24 +1,30 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { SignUpRequestDto, TokenRequestDto } from './auth.dto';
+import {
+  SignupRequestDto,
+  TokenRequestDto,
+  TokenResponseDto,
+} from './auth.dto';
+import UserService from '../users/users.service';
+import { User } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
-  constructor() {}
+  userService: UserService;
+  constructor(userService: UserService) {
+    this.userService = userService;
+  }
 
   @Post('signup')
-  signUp(@Body() body: SignUpRequestDto) {
-    return {
-      user: body.email,
-    };
+  async signup(@Body() request: SignupRequestDto): Promise<User> {
+    return await this.userService.createUser(request);
   }
 
   @Post('token')
-  login(@Body() body: TokenRequestDto) {
+  login(@Body() request: TokenRequestDto) {
     return {
       accessToken: 'abc',
-      refreshToken: body.refreshToken || 'def',
-      accessTokenExpiry: '10-12-2026T12:23:23:123123Z',
-      refreshTokeExpiry: '10-12-2026T12:23:23:123123Z',
-    };
+      refreshToken: request.refreshToken || 'def',
+      expiresAt: new Date(new Date().valueOf() + 60 * 60 * 1000),
+    } as TokenResponseDto;
   }
 }
