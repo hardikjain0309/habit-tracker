@@ -3,9 +3,8 @@ import {
   SignupRequestDto,
   TokenRequestDto,
   TokenResponseDto,
-} from './auth.dto';
-import UserService from '../users/users.service';
-import { User } from '@prisma/client';
+} from './auth.dto.js';
+import UserService from '../users/users.service.js';
 
 @Controller('auth')
 export class AuthController {
@@ -15,8 +14,12 @@ export class AuthController {
   }
 
   @Post('signup')
-  async signup(@Body() request: SignupRequestDto): Promise<User> {
-    return await this.userService.createUser(request);
+  async signup(@Body() request: SignupRequestDto) {
+    const userData = await this.userService.createUser(request);
+    return {
+      ...userData,
+      passwordHash: undefined,
+    };
   }
 
   @Post('token')

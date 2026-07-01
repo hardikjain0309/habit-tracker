@@ -17,10 +17,6 @@ export class SignupRequestDto {
   password!: string;
 }
 
-export class SignupResponseDto {
-  userId!: string;
-}
-
 export class TokenRequestDto {
   @IsIn(['password', 'refresh_token'])
   grantType!: 'password' | 'refresh_token';
