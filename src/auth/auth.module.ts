@@ -1,9 +1,21 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller.js';
 import UsersModule from '../users/users.module.js';
+import AuthService from './auth.service.js';
+import { JwtModule } from '@nestjs/jwt';
+import { AppConfig } from '../app.config.js';
 
 @Module({
   controllers: [AuthController],
-  imports: [UsersModule],
+  providers: [AuthService],
+  imports: [
+    UsersModule,
+    JwtModule.register({
+      secret: AppConfig.JWT_SECRET,
+      signOptions: {
+        expiresIn: '15m',
+      },
+    }),
+  ],
 })
 export default class AuthModule {}

@@ -24,21 +24,21 @@ export class TokenRequestDto {
   @ValidateIf((o: TokenRequestDto) => o.grantType === 'password')
   @IsNotEmpty()
   @IsEmail()
-  email?: string;
+  email!: string;
 
   @ValidateIf((o: TokenRequestDto) => o.grantType === 'password')
   @IsNotEmpty()
   @IsString()
-  password?: string;
+  password!: string;
 
   @ValidateIf((o: TokenRequestDto) => o.grantType === 'refresh_token')
   @IsNotEmpty()
   @IsString()
-  refreshToken?: string;
+  refreshToken!: string;
 }
 
 export class TokenResponseDto {
   accessToken!: string;
   refreshToken!: string;
-  expiresAt!: Date;
+  expiresAt!: number;
 }

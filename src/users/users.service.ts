@@ -18,4 +18,12 @@ export default class UserService {
     });
     return user;
   }
+
+  async getUser(email: string) {
+    return await this.prisma.user.findUniqueOrThrow({
+      where: {
+        email,
+      },
+    });
+  }
 }
