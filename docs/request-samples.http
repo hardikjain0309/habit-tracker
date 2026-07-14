@@ -42,8 +42,7 @@ Content-Type: application/json
 
 {
   "grantType": "refresh_token",
-  "email": "hardik.j0309@gmail.com",
-  "password": "password"
+  "refreshToken": "6039670d-480f-46eb-85f3-e2e5c9f1e9a9.ea6227c7-ad4d-4fb8-bec4-b9600f15d365"
 }
 
 ###

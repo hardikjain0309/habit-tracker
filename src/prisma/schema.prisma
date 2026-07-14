@@ -16,7 +16,8 @@ model User {
 }
 
 model UserSessions {
-  sessionId String
+  userId String @default("")
+  sessionId String @unique
   refreshTokenHash String @unique
   expiresAt DateTime
 }

@@ -13,6 +13,22 @@ export default class AuthService {
     private readonly jwt: JwtService,
     private readonly prismaService: PrismaService,
   ) {}
+  private async generateTokenPair(sessionId: string, userId: string) {
+    const accessToken = this.jwt.sign({
+      sub: userId,
+      sid: sessionId,
+    });
+    const expiresAt = new Date().valueOf() + 15 * 60 * 1000; // 15 mins expiry
+    const refreshToken = `${sessionId}.${randomUUID()}`;
+    const refreshTokenHash = await argon2.hash(refreshToken);
+    return {
+      accessToken,
+      expiresAt,
+      refreshToken,
+      refreshTokenHash,
+    };
+  }
+
   private async generateTokenWithCreds(
     request: TokenRequestDto,
   ): Promise<TokenResponseDto> {
@@ -29,41 +45,71 @@ export default class AuthService {
     }
     // Generate new access token and refresh token pair
     const sessionId = randomUUID();
-    const expiresAt = new Date().valueOf() + 15 * 60 * 1000; // 15 mins expiry
-    const refreshTokenExpiresAt = new Date().valueOf() + 24 * 60 * 60 * 1000; // 1 hour expiry
-    const accessToken = this.jwt.sign({
-      sub: user.id,
-      sid: sessionId,
-    });
-    const refreshToken = this.jwt.sign(
-      {
-        sub: user.id,
-        sid: sessionId,
-      },
-      {
-        expiresIn: '1d',
-      },
-    );
-    const refreshTokenHash = await argon2.hash(refreshToken);
+    const refreshTokenExpiresAt = new Date().valueOf() + 24 * 60 * 60 * 1000; // 1d expiry
+    const tokenPair = await this.generateTokenPair(sessionId, user.id);
+
     // Store refresh token and session id in DB
     await this.prismaService.userSessions.create({
       data: {
+        userId: user.id,
         sessionId,
-        refreshTokenHash,
+        refreshTokenHash: tokenPair.refreshTokenHash,
         expiresAt: new Date(refreshTokenExpiresAt),
       },
     });
     return {
-      accessToken,
-      refreshToken,
-      expiresAt,
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      expiresAt: tokenPair.expiresAt,
     };
   }
 
   private async refreshToken(request: TokenRequestDto) {
-    console.log(request);
-    // Validate refresh token validity from DB
+    const sessionId = request.refreshToken.split('.')?.[0];
+    if (!sessionId) {
+      console.log('no session id', sessionId);
+      throw new Error('Invalid refresh token');
+    }
+    // Validate refresh token from user sessions table
+    const userSession = await this.prismaService.userSessions.findUnique({
+      where: {
+        sessionId,
+      },
+    });
+    if (
+      !userSession ||
+      !(await argon2.verify(userSession.refreshTokenHash, request.refreshToken))
+    ) {
+      throw new Error('Invalid refresh token');
+    }
+
+    if (userSession.expiresAt.valueOf() < new Date().valueOf()) {
+      await this.prismaService.userSessions.delete({
+        where: {
+          sessionId: userSession.sessionId,
+        },
+      });
+      throw new Error('Refresh token has expired');
+    }
     // Generate new access token and refresh token pair
+    const tokenPair = await this.generateTokenPair(
+      userSession.sessionId,
+      userSession.userId,
+    );
+    // Update user session
+    await this.prismaService.userSessions.update({
+      data: {
+        refreshTokenHash: tokenPair.refreshTokenHash,
+      },
+      where: {
+        sessionId: userSession.sessionId,
+      },
+    });
+    return {
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      expiresAt: tokenPair.expiresAt,
+    };
   }
 
   async generateToken(request: TokenRequestDto) {
