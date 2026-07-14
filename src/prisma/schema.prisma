@@ -14,3 +14,9 @@ model User {
   name String
   passwordHash String
 }
+
+model UserSessions {
+  sessionId String
+  refreshTokenHash String @unique
+  expiresAt DateTime
+}

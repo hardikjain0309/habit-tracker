@@ -4,6 +4,7 @@ import UsersModule from '../users/users.module.js';
 import AuthService from './auth.service.js';
 import { JwtModule } from '@nestjs/jwt';
 import { AppConfig } from '../app.config.js';
+import PrismaModule from '../prisma/prisma.module.js';
 
 @Module({
   controllers: [AuthController],
@@ -16,6 +17,7 @@ import { AppConfig } from '../app.config.js';
         expiresIn: '15m',
       },
     }),
+    PrismaModule,
   ],
 })
 export default class AuthModule {}
