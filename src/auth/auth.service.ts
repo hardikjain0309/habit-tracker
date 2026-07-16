@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { TokenRequestDto, TokenResponseDto } from './auth.dto.js';
 import UserService from '../users/users.service.js';
 import argon2 from 'argon2';
@@ -32,7 +32,6 @@ export default class AuthService {
   private async generateTokenWithCreds(
     request: TokenRequestDto,
   ): Promise<TokenResponseDto> {
-    console.log(process.env);
     // Get User from DB
     const user = await this.userService.getUser(request.email);
     // Validate user creds from DB
@@ -41,7 +40,10 @@ export default class AuthService {
       request.password,
     );
     if (!isValidPassword) {
-      throw new Error('Invalid username or password');
+      throw new HttpException(
+        'Invalid username or password',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
     // Generate new access token and refresh token pair
     const sessionId = randomUUID();
@@ -67,8 +69,10 @@ export default class AuthService {
   private async refreshToken(request: TokenRequestDto) {
     const sessionId = request.refreshToken.split('.')?.[0];
     if (!sessionId) {
-      console.log('no session id', sessionId);
-      throw new Error('Invalid refresh token');
+      throw new HttpException(
+        'Unable to parse the provided refresh token.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     // Validate refresh token from user sessions table
     const userSession = await this.prismaService.userSessions.findUnique({
@@ -80,16 +84,21 @@ export default class AuthService {
       !userSession ||
       !(await argon2.verify(userSession.refreshTokenHash, request.refreshToken))
     ) {
-      throw new Error('Invalid refresh token');
+      throw new HttpException(
+        'Invalid session or refresh token. Please login again.',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
-
     if (userSession.expiresAt.valueOf() < new Date().valueOf()) {
       await this.prismaService.userSessions.delete({
         where: {
           sessionId: userSession.sessionId,
         },
       });
-      throw new Error('Refresh token has expired');
+      throw new HttpException(
+        'Refresh token has expired',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
     // Generate new access token and refresh token pair
     const tokenPair = await this.generateTokenPair(
