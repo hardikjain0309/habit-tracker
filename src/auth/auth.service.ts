@@ -71,7 +71,7 @@ export default class AuthService {
     if (!sessionId) {
       throw new HttpException(
         'Unable to parse the provided refresh token.',
-        HttpStatus.BAD_REQUEST,
+        HttpStatus.UNAUTHORIZED,
       );
     }
     // Validate refresh token from user sessions table
