@@ -3,56 +3,76 @@ import UserService from '../users/users.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Test } from '@nestjs/testing';
 import { AuthController } from './auth.controller.js';
-import argon2 from 'argon2';
 import AuthService from './auth.service.js';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '../prisma/generated/client.js';
+import { SignupRequestDto } from './auth.dto.js';
 
-const prismaMock = {
-  user: {
-    create: jest.fn<() => Promise<User>>(),
-  },
+const userServiceMock = {
+  createUser: jest.fn<() => Promise<User>>(),
 };
+
+function createSignUpRequest(
+  overrides: Partial<SignupRequestDto> = {},
+): SignupRequestDto {
+  return {
+    email: 'hardik.j0309@gmail.com',
+    name: 'Hardik Jain',
+    password: 'password',
+    ...overrides,
+  };
+}
+
+function createUser(overrides: Partial<User> = {}): User {
+  return {
+    id: 'some-uuid',
+    email: 'hardik.j0309@gmail.com',
+    name: 'Hardik Jain',
+    createdAt: new Date(),
+    passwordHash: 'hashed-password',
+    ...overrides,
+  };
+}
 
 describe('AuthController', () => {
   let authController: AuthController;
+  let userService: UserService;
 
   beforeEach(async () => {
-    const userModule = await Test.createTestingModule({
+    jest.clearAllMocks();
+    const moduleRef = await Test.createTestingModule({
       providers: [
         AuthService,
-        UserService,
+        PrismaService,
         JwtService,
         {
-          provide: PrismaService,
-          useValue: prismaMock,
+          provide: UserService,
+          useValue: userServiceMock,
         },
       ],
       controllers: [AuthController],
     }).compile();
-    authController = userModule.get(AuthController);
+    authController = moduleRef.get(AuthController);
+    userService = moduleRef.get(UserService);
   });
 
   describe('Sign Up API', () => {
-    it('should return 201 with user entity on successful signup', async () => {
-      const newUserEntity = {
-        email: 'hardik.j0309@gmail.com',
-        id: 'some-uuid',
-        createdAt: new Date(),
-        name: 'Hardik Jain',
-        passwordHash: await argon2.hash('password'),
-      };
-      prismaMock.user.create.mockResolvedValue(newUserEntity);
-      const signUpResponse = await authController.signup({
-        email: 'hardik.j0309@gmail.com',
-        name: 'Hardik Jain',
-        password: 'password',
-      });
-      expect(signUpResponse.email).toBe('hardik.j0309@gmail.com');
-      expect(signUpResponse.name).toBe('Hardik Jain');
+    it('should create a new user', async () => {
+      // Setup
+      const signUpRequest = createSignUpRequest();
+      const newUserEntity = createUser();
+      userServiceMock.createUser.mockResolvedValue(newUserEntity);
+      jest.spyOn(userService, 'createUser');
+      // Execute
+      const signUpResponse = await authController.signup(signUpRequest);
+      // Assert
+      expect(userServiceMock.createUser).toHaveBeenCalledTimes(1);
+      expect(userServiceMock.createUser).toHaveBeenCalledWith(signUpRequest);
+      expect(signUpResponse.email).toBe(newUserEntity.email);
+      expect(signUpResponse.name).toBe(newUserEntity.name);
+      expect(signUpResponse.id).toBe(newUserEntity.id);
+      expect(signUpResponse.createdAt).toBe(newUserEntity.createdAt);
       expect(signUpResponse.passwordHash).toBeUndefined();
-      expect(signUpResponse.id).toBe('some-uuid');
-      expect(signUpResponse.createdAt).toBeTruthy();
     });
   });
 });
