@@ -4,6 +4,8 @@ import { User } from '../prisma/generated/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import UserService from './users.service.js';
 import { SignupRequestDto } from '../auth/auth.dto.js';
+import { BadRequestException } from '@nestjs/common';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 
 const prismaMock = {
   user: {
@@ -31,6 +33,13 @@ function createUser(overrides: Partial<User> = {}): User {
     passwordHash: 'hashed-password',
     ...overrides,
   };
+}
+
+function createUniqueConstraintFailedPrismaError(): PrismaClientKnownRequestError {
+  return new PrismaClientKnownRequestError('Unique constraint violation', {
+    code: 'P2002',
+    clientVersion: '1.1',
+  });
 }
 
 describe('UserService', () => {
@@ -68,6 +77,21 @@ describe('UserService', () => {
         }),
       );
       expect(createdUser).toEqual(newUserEntity);
+    });
+
+    it('should return appropriate response in case of email already exists', async () => {
+      // Setup
+      const signUpRequest = createSignUpRequest();
+      const uniqueConstraintFailedPrismaError =
+        createUniqueConstraintFailedPrismaError();
+      prismaMock.user.create.mockRejectedValue(
+        uniqueConstraintFailedPrismaError,
+      );
+      // Execute and assert
+      await expect(userService.createUser(signUpRequest)).rejects.toThrow(
+        new BadRequestException('User already exists.'),
+      );
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(1);
     });
   });
 });

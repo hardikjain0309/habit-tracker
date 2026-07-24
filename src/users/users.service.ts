@@ -24,7 +24,10 @@ export default class UserService {
       });
       return user;
     } catch (error) {
-      if ((error as PrismaClientKnownRequestError)?.code === 'P2002') {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new BadRequestException('User already exists.');
       }
       throw new InternalServerErrorException('Unable to create new user.');

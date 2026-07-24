@@ -1,15 +1,21 @@
 import { jest } from '@jest/globals';
 import UserService from '../users/users.service.js';
-import { PrismaService } from '../prisma/prisma.service.js';
 import { Test } from '@nestjs/testing';
 import { AuthController } from './auth.controller.js';
 import AuthService from './auth.service.js';
-import { JwtService } from '@nestjs/jwt';
 import { User } from '../prisma/generated/client.js';
-import { SignupRequestDto } from './auth.dto.js';
+import {
+  SignupRequestDto,
+  TokenRequestDto,
+  TokenResponseDto,
+} from './auth.dto.js';
 
 const userServiceMock = {
   createUser: jest.fn<() => Promise<User>>(),
+};
+
+const authServiceMock = {
+  generateToken: jest.fn<() => Promise<TokenResponseDto>>(),
 };
 
 function createSignUpRequest(
@@ -34,6 +40,22 @@ function createUser(overrides: Partial<User> = {}): User {
   };
 }
 
+function createPasswordGrantTokenRequest(): Partial<TokenRequestDto> {
+  return {
+    grantType: 'password',
+    email: 'hardik.j0309@gmail.com',
+    password: 'password',
+  };
+}
+
+function createTokenPairResponse(): TokenResponseDto {
+  return {
+    accessToken: 'access-token',
+    refreshToken: 'refresh-token',
+    expiresAt: 123,
+  };
+}
+
 describe('AuthController', () => {
   let authController: AuthController;
   let userService: UserService;
@@ -42,12 +64,13 @@ describe('AuthController', () => {
     jest.clearAllMocks();
     const moduleRef = await Test.createTestingModule({
       providers: [
-        AuthService,
-        PrismaService,
-        JwtService,
         {
           provide: UserService,
           useValue: userServiceMock,
+        },
+        {
+          provide: AuthService,
+          useValue: authServiceMock,
         },
       ],
       controllers: [AuthController],
@@ -73,6 +96,21 @@ describe('AuthController', () => {
       expect(signUpResponse.id).toBe(newUserEntity.id);
       expect(signUpResponse.createdAt).toBe(newUserEntity.createdAt);
       expect(signUpResponse.passwordHash).toBeUndefined();
+    });
+  });
+
+  describe('Generate Auth Token API', () => {
+    it('should accept user creds to generate tokens', async () => {
+      // Setup
+      const passwordGrantRequest = createPasswordGrantTokenRequest();
+      const mockTokenResponse: TokenResponseDto = createTokenPairResponse();
+      authServiceMock.generateToken.mockResolvedValue(mockTokenResponse);
+      // Execute
+      const response = await authController.login(
+        passwordGrantRequest as TokenRequestDto,
+      );
+      // Assert
+      expect(response).toEqual(mockTokenResponse);
     });
   });
 });
