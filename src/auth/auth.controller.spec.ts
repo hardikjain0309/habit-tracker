@@ -9,6 +9,10 @@ import {
   TokenRequestDto,
   TokenResponseDto,
 } from './auth.dto.js';
+import {
+  buildPasswordGrantTokenRequest,
+  buildTokenPairResponse,
+} from '../../test/factories/auth.factory.js';
 
 const userServiceMock = {
   createUser: jest.fn<() => Promise<User>>(),
@@ -37,22 +41,6 @@ function createUser(overrides: Partial<User> = {}): User {
     createdAt: new Date(),
     passwordHash: 'hashed-password',
     ...overrides,
-  };
-}
-
-function createPasswordGrantTokenRequest(): Partial<TokenRequestDto> {
-  return {
-    grantType: 'password',
-    email: 'hardik.j0309@gmail.com',
-    password: 'password',
-  };
-}
-
-function createTokenPairResponse(): TokenResponseDto {
-  return {
-    accessToken: 'access-token',
-    refreshToken: 'refresh-token',
-    expiresAt: 123,
   };
 }
 
@@ -102,8 +90,8 @@ describe('AuthController', () => {
   describe('Generate Auth Token API', () => {
     it('should accept user creds to generate tokens', async () => {
       // Setup
-      const passwordGrantRequest = createPasswordGrantTokenRequest();
-      const mockTokenResponse: TokenResponseDto = createTokenPairResponse();
+      const passwordGrantRequest = buildPasswordGrantTokenRequest();
+      const mockTokenResponse: TokenResponseDto = buildTokenPairResponse();
       authServiceMock.generateToken.mockResolvedValue(mockTokenResponse);
       // Execute
       const response = await authController.login(

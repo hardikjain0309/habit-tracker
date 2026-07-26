@@ -1,51 +1,28 @@
 import { jest } from '@jest/globals';
 import { Test } from '@nestjs/testing';
-import { User } from '../prisma/generated/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import UserService from './users.service.js';
-import { SignupRequestDto } from '../auth/auth.dto.js';
-import { BadRequestException } from '@nestjs/common';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
-
-const prismaMock = {
-  user: {
-    create: jest.fn<() => Promise<User>>(),
-  },
-};
-
-function createSignUpRequest(
-  overrides: Partial<SignupRequestDto> = {},
-): SignupRequestDto {
-  return {
-    email: 'hardik.j0309@gmail.com',
-    name: 'Hardik Jain',
-    password: 'password',
-    ...overrides,
-  };
-}
-
-function createUser(overrides: Partial<User> = {}): User {
-  return {
-    id: 'some-uuid',
-    email: 'hardik.j0309@gmail.com',
-    name: 'Hardik Jain',
-    createdAt: new Date(),
-    passwordHash: 'hashed-password',
-    ...overrides,
-  };
-}
-
-function createUniqueConstraintFailedPrismaError(): PrismaClientKnownRequestError {
-  return new PrismaClientKnownRequestError('Unique constraint violation', {
-    code: 'P2002',
-    clientVersion: '1.1',
-  });
-}
+import {
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { createPrismaMock } from '../../test/mocks/prisma.mock.js';
+import {
+  buildSignUpRequest,
+  buildUser,
+} from '../../test/factories/user.factory.js';
+import {
+  buildNotFoundPrismaError,
+  buildUniqueConstraintFailedPrismaError,
+  buildUnknownPrismaError,
+} from '../../test/utils/prisma-errors.js';
 
 describe('UserService', () => {
   let userService: UserService;
+  let prismaMock: ReturnType<typeof createPrismaMock>;
   beforeEach(async () => {
     jest.clearAllMocks();
+    prismaMock = createPrismaMock();
     const moduleRef = await Test.createTestingModule({
       providers: [
         UserService,
@@ -60,9 +37,9 @@ describe('UserService', () => {
   describe('createUser', () => {
     it('should create new user', async () => {
       // Setup
-      const signUpRequest = createSignUpRequest();
-      const newUserEntity = createUser();
-      prismaMock.user.create.mockResolvedValue(newUserEntity);
+      const signUpRequest = buildSignUpRequest();
+      const newUser = buildUser();
+      prismaMock.user.create.mockResolvedValue(newUser);
       // Execute
       const createdUser = await userService.createUser(signUpRequest);
       // Assert
@@ -76,14 +53,14 @@ describe('UserService', () => {
           }),
         }),
       );
-      expect(createdUser).toEqual(newUserEntity);
+      expect(createdUser).toEqual(newUser);
     });
 
     it('should return appropriate response in case of email already exists', async () => {
       // Setup
-      const signUpRequest = createSignUpRequest();
+      const signUpRequest = buildSignUpRequest();
       const uniqueConstraintFailedPrismaError =
-        createUniqueConstraintFailedPrismaError();
+        buildUniqueConstraintFailedPrismaError();
       prismaMock.user.create.mockRejectedValue(
         uniqueConstraintFailedPrismaError,
       );
@@ -92,6 +69,49 @@ describe('UserService', () => {
         new BadRequestException('User already exists.'),
       );
       expect(prismaMock.user.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return generic error in case of unknown prisma error', async () => {
+      // Setup
+      const signUpRequest = buildSignUpRequest();
+      const unknownPrismaError = buildUnknownPrismaError();
+      prismaMock.user.create.mockRejectedValue(unknownPrismaError);
+      // Execute and assert
+      await expect(userService.createUser(signUpRequest)).rejects.toThrow(
+        new InternalServerErrorException('Unable to create new user.'),
+      );
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('getUser', () => {
+    it('should return the user if it exists', async () => {
+      // Setup
+      const existingUser = buildUser();
+      prismaMock.user.findUniqueOrThrow.mockResolvedValue(existingUser);
+      // Execute and assert
+      await expect(userService.getUser(existingUser.email)).resolves.toEqual(
+        existingUser,
+      );
+      expect(prismaMock.user.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+      expect(prismaMock.user.findUniqueOrThrow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            email: existingUser.email,
+          },
+        }),
+      );
+    });
+
+    it('should throw prisma not found error if it doesnt not exist', async () => {
+      // Setup
+      const prismaException = buildNotFoundPrismaError();
+      prismaMock.user.findUniqueOrThrow.mockRejectedValue(prismaException);
+      // Execeute and assert
+      await expect(userService.getUser('non existing user')).rejects.toThrow(
+        prismaException,
+      );
+      expect(prismaMock.user.findUniqueOrThrow).toHaveBeenCalledTimes(1);
     });
   });
 });

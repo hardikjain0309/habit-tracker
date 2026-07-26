@@ -35,7 +35,7 @@ export default class UserService {
   }
 
   async getUser(email: string) {
-    return await this.prisma.user.findUniqueOrThrow({
+    return this.prisma.user.findUniqueOrThrow({
       where: {
         email,
       },
