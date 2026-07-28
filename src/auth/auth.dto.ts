@@ -17,24 +17,31 @@ export class SignupRequestDto {
   password!: string;
 }
 
+export class SignUpResponseDto {
+  id: string;
+  createdAt: Date;
+  name: string;
+  email: string;
+}
+
 export class TokenRequestDto {
   @IsIn(['password', 'refresh_token'])
-  grantType!: 'password' | 'refresh_token';
+  grantType: 'password' | 'refresh_token';
 
   @ValidateIf((o: TokenRequestDto) => o.grantType === 'password')
   @IsNotEmpty()
   @IsEmail()
-  email!: string;
+  email?: string;
 
   @ValidateIf((o: TokenRequestDto) => o.grantType === 'password')
   @IsNotEmpty()
   @IsString()
-  password!: string;
+  password?: string;
 
   @ValidateIf((o: TokenRequestDto) => o.grantType === 'refresh_token')
   @IsNotEmpty()
   @IsString()
-  refreshToken!: string;
+  refreshToken?: string;
 }
 
 export class TokenResponseDto {

@@ -3,54 +3,30 @@ import UserService from '../users/users.service.js';
 import { Test } from '@nestjs/testing';
 import { AuthController } from './auth.controller.js';
 import AuthService from './auth.service.js';
-import { User } from '../prisma/generated/client.js';
-import {
-  SignupRequestDto,
-  TokenRequestDto,
-  TokenResponseDto,
-} from './auth.dto.js';
 import {
   buildPasswordGrantTokenRequest,
+  buildRefreshTokenRequest,
   buildTokenPairResponse,
 } from '../../test/factories/auth.factory.js';
-
-const userServiceMock = {
-  createUser: jest.fn<() => Promise<User>>(),
-};
-
-const authServiceMock = {
-  generateToken: jest.fn<() => Promise<TokenResponseDto>>(),
-};
-
-function createSignUpRequest(
-  overrides: Partial<SignupRequestDto> = {},
-): SignupRequestDto {
-  return {
-    email: 'hardik.j0309@gmail.com',
-    name: 'Hardik Jain',
-    password: 'password',
-    ...overrides,
-  };
-}
-
-function createUser(overrides: Partial<User> = {}): User {
-  return {
-    id: 'some-uuid',
-    email: 'hardik.j0309@gmail.com',
-    name: 'Hardik Jain',
-    createdAt: new Date(),
-    passwordHash: 'hashed-password',
-    ...overrides,
-  };
-}
+import { InternalServerErrorException } from '@nestjs/common';
+import { createUserServiceMock } from '../../test/mocks/user-service.mock.js';
+import { createAuthServiceMock } from '../../test/mocks/auth-service.mock.js';
+import {
+  buildSignUpRequest,
+  buildUser,
+} from '../../test/factories/user.factory.js';
+import { TokenResponseDto } from './auth.dto.js';
 
 describe('AuthController', () => {
   let authController: AuthController;
-  let userService: UserService;
+  let userServiceMock: ReturnType<typeof createUserServiceMock>;
+  let authServiceMock: ReturnType<typeof createAuthServiceMock>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    const moduleRef = await Test.createTestingModule({
+    userServiceMock = createUserServiceMock();
+    authServiceMock = createAuthServiceMock();
+    const module = await Test.createTestingModule({
       providers: [
         {
           provide: UserService,
@@ -63,42 +39,89 @@ describe('AuthController', () => {
       ],
       controllers: [AuthController],
     }).compile();
-    authController = moduleRef.get(AuthController);
-    userService = moduleRef.get(UserService);
+    authController = module.get(AuthController);
   });
 
   describe('Sign Up API', () => {
     it('should create a new user', async () => {
-      // Setup
-      const signUpRequest = createSignUpRequest();
-      const newUserEntity = createUser();
+      // Arrange
+      const signUpRequest = buildSignUpRequest();
+      const newUserEntity = buildUser();
       userServiceMock.createUser.mockResolvedValue(newUserEntity);
-      jest.spyOn(userService, 'createUser');
-      // Execute
+      // Act
       const signUpResponse = await authController.signup(signUpRequest);
       // Assert
       expect(userServiceMock.createUser).toHaveBeenCalledTimes(1);
       expect(userServiceMock.createUser).toHaveBeenCalledWith(signUpRequest);
-      expect(signUpResponse.email).toBe(newUserEntity.email);
-      expect(signUpResponse.name).toBe(newUserEntity.name);
-      expect(signUpResponse.id).toBe(newUserEntity.id);
-      expect(signUpResponse.createdAt).toBe(newUserEntity.createdAt);
-      expect(signUpResponse.passwordHash).toBeUndefined();
+      expect(signUpResponse).toEqual({
+        email: newUserEntity.email,
+        name: newUserEntity.name,
+        id: newUserEntity.id,
+        createdAt: newUserEntity.createdAt,
+      });
+      expect(signUpResponse).not.toHaveProperty('passwordHash');
+    });
+
+    it('should pass through exception thrown by user service', async () => {
+      // Arrange
+      const signUpRequest = buildSignUpRequest();
+      const mockHttpException = new InternalServerErrorException('Some error');
+      userServiceMock.createUser.mockRejectedValue(mockHttpException);
+      // Act
+      await expect(authController.signup(signUpRequest)).rejects.toThrow(
+        mockHttpException,
+      );
+      // Assert
+      expect(userServiceMock.createUser).toHaveBeenCalledTimes(1);
+      expect(userServiceMock.createUser).toHaveBeenCalledWith(signUpRequest);
     });
   });
 
   describe('Generate Auth Token API', () => {
     it('should accept user creds to generate tokens', async () => {
-      // Setup
+      // Arrange
       const passwordGrantRequest = buildPasswordGrantTokenRequest();
       const mockTokenResponse: TokenResponseDto = buildTokenPairResponse();
       authServiceMock.generateToken.mockResolvedValue(mockTokenResponse);
-      // Execute
-      const response = await authController.login(
-        passwordGrantRequest as TokenRequestDto,
+      // Act
+      const response = await authController.login(passwordGrantRequest);
+      // Assert
+      expect(response).toBe(mockTokenResponse);
+      expect(authServiceMock.generateToken).toHaveBeenCalledTimes(1);
+      expect(authServiceMock.generateToken).toHaveBeenCalledWith(
+        passwordGrantRequest,
+      );
+    });
+
+    it('should accept refresh token to generate tokens', async () => {
+      // Arrange
+      const refreshTokenRequest = buildRefreshTokenRequest();
+      const mockTokenResponse: TokenResponseDto = buildTokenPairResponse();
+      authServiceMock.generateToken.mockResolvedValue(mockTokenResponse);
+      // Act
+      const response = await authController.login(refreshTokenRequest);
+      // Assert
+      expect(response).toBe(mockTokenResponse);
+      expect(authServiceMock.generateToken).toHaveBeenCalledTimes(1);
+      expect(authServiceMock.generateToken).toHaveBeenCalledWith(
+        refreshTokenRequest,
+      );
+    });
+
+    it('should pass through exception raised from auth service', async () => {
+      // Arrange
+      const refreshTokenRequest = buildRefreshTokenRequest();
+      const mockHttpException = new InternalServerErrorException('Some error');
+      authServiceMock.generateToken.mockRejectedValue(mockHttpException);
+      // Act
+      await expect(authController.login(refreshTokenRequest)).rejects.toThrow(
+        mockHttpException,
       );
       // Assert
-      expect(response).toEqual(mockTokenResponse);
+      expect(authServiceMock.generateToken).toHaveBeenCalledTimes(1);
+      expect(authServiceMock.generateToken).toHaveBeenCalledWith(
+        refreshTokenRequest,
+      );
     });
   });
 });
