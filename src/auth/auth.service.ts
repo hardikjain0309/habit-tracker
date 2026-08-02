@@ -3,8 +3,8 @@ import { TokenRequestDto, TokenResponseDto } from './auth.dto.js';
 import UserService from '../users/users.service.js';
 import argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
-import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { UUIDService } from '../tools/uuid.service.js';
 
 @Injectable()
 export default class AuthService {
@@ -12,14 +12,15 @@ export default class AuthService {
     private readonly userService: UserService,
     private readonly jwt: JwtService,
     private readonly prismaService: PrismaService,
+    private readonly uuidService: UUIDService,
   ) {}
   private async generateTokenPair(sessionId: string, userId: string) {
     const accessToken = this.jwt.sign({
       sub: userId,
       sid: sessionId,
     });
-    const expiresAt = new Date().valueOf() + 15 * 60 * 1000; // 15 mins expiry
-    const refreshToken = `${sessionId}.${randomUUID()}`;
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+    const refreshToken = `${sessionId}.${this.uuidService.generateUUID()}`;
     const refreshTokenHash = await argon2.hash(refreshToken);
     return {
       accessToken,
@@ -46,8 +47,8 @@ export default class AuthService {
       );
     }
     // Generate new access token and refresh token pair
-    const sessionId = randomUUID();
-    const refreshTokenExpiresAt = new Date().valueOf() + 24 * 60 * 60 * 1000; // 1d expiry
+    const sessionId = this.uuidService.generateUUID();
+    const refreshTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1d expiry
     const tokenPair = await this.generateTokenPair(sessionId, user.id);
 
     // Store refresh token and session id in DB

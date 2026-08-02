@@ -47,5 +47,5 @@ export class TokenRequestDto {
 export class TokenResponseDto {
   accessToken!: string;
   refreshToken!: string;
-  expiresAt!: number;
+  expiresAt!: Date;
 }

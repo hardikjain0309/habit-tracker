@@ -19,6 +19,6 @@ export function buildTokenPairResponse(): TokenResponseDto {
   return {
     accessToken: 'access-token',
     refreshToken: 'refresh-token',
-    expiresAt: 123,
+    expiresAt: new Date(Date.now(), 15 * 60 * 1000), // 15 mins from now
   };
 }

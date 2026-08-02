@@ -1,5 +1,5 @@
 import { SignupRequestDto } from '../../src/auth/auth.dto.js';
-import { User } from '../../src/prisma/generated/client.js';
+import { User, UserSessions } from '../../src/prisma/generated/client.js';
 
 export function buildSignUpRequest(
   overrides: Partial<SignupRequestDto> = {},
@@ -20,5 +20,14 @@ export function buildUser(overrides: Partial<User> = {}): User {
     createdAt: new Date(),
     passwordHash: 'hashed-password',
     ...overrides,
+  };
+}
+
+export function buildUserSession(): UserSessions {
+  return {
+    sessionId: 'some-sessionid',
+    userId: 'some-uuid',
+    refreshTokenHash: 'refresh-token-hash',
+    expiresAt: new Date(Date.now() + 12 * 60 * 1000), // 1 hour from now
   };
 }

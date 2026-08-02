@@ -5,6 +5,7 @@ import AuthService from './auth.service.js';
 import { JwtModule } from '@nestjs/jwt';
 import { AppConfig } from '../app.config.js';
 import PrismaModule from '../prisma/prisma.module.js';
+import ToolsModule from '../tools/tools.module.js';
 
 @Module({
   controllers: [AuthController],
@@ -18,6 +19,7 @@ import PrismaModule from '../prisma/prisma.module.js';
       },
     }),
     PrismaModule,
+    ToolsModule,
   ],
 })
 export default class AuthModule {}

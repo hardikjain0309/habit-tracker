@@ -7,5 +7,8 @@ export function createPrismaMock() {
       create: jest.fn<PrismaService['user']['create']>(),
       findUniqueOrThrow: jest.fn<PrismaService['user']['findUniqueOrThrow']>(),
     },
+    userSessions: {
+      create: jest.fn<PrismaService['userSessions']['create']>(),
+    },
   };
 }
