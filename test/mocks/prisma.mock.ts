@@ -9,6 +9,8 @@ export function createPrismaMock() {
     },
     userSessions: {
       create: jest.fn<PrismaService['userSessions']['create']>(),
+      findUnique: jest.fn<PrismaService['userSessions']['findUnique']>(),
+      update: jest.fn<PrismaService['userSessions']['update']>(),
     },
   };
 }

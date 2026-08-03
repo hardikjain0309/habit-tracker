@@ -8,17 +8,20 @@ export function buildPasswordGrantTokenRequest(): TokenRequestDto {
   };
 }
 
-export function buildRefreshTokenRequest(): TokenRequestDto {
+export function buildRefreshTokenRequest(
+  overrides?: Partial<TokenRequestDto>,
+): TokenRequestDto {
   return {
     grantType: 'refresh_token',
-    refreshToken: 'refresh-token',
+    refreshToken: 'some-sessionid.some-refresh-token-uuid',
+    ...overrides,
   };
 }
 
 export function buildTokenPairResponse(): TokenResponseDto {
   return {
     accessToken: 'access-token',
-    refreshToken: 'refresh-token',
+    refreshToken: 'some-sessionid.some-refresh-token-uuid',
     expiresAt: new Date(Date.now(), 15 * 60 * 1000), // 15 mins from now
   };
 }

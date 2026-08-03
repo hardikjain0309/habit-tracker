@@ -14,6 +14,7 @@ import {
 } from '../../test/factories/user.factory.js';
 import {
   buildPasswordGrantTokenRequest,
+  buildRefreshTokenRequest,
   buildTokenPairResponse,
 } from '../../test/factories/auth.factory.js';
 import { createUUIDServiceMock } from '../../test/mocks/uuid-service.mock.js';
@@ -57,7 +58,7 @@ describe('AuthService', () => {
   });
 
   describe('generateToken', () => {
-    it('should return jwt signed token pair', async () => {
+    it('should return jwt signed token pair when passing creds', async () => {
       // Arrange
       const now = Date.now();
       jest.spyOn(Date, 'now').mockReturnValue(now);
@@ -111,6 +112,66 @@ describe('AuthService', () => {
         accessToken: mockTokenPair.accessToken,
         refreshToken: expectedRefreshToken,
         expiresAt: expectedAccessTokenExpiry,
+      });
+    });
+
+    it('should return token pair when passing refresh token', async () => {
+      // Arrange
+      const now = Date.now();
+      const mockUserSession = buildUserSession();
+      const mockRefreshTokenRequest = buildRefreshTokenRequest();
+      prismaServiceMock.userSessions.findUnique.mockResolvedValue(
+        mockUserSession,
+      );
+      jest.spyOn(argon2, 'verify').mockResolvedValue(true);
+      const mockTokenPair = buildTokenPairResponse();
+      jwtMock.sign.mockReturnValue(mockTokenPair.accessToken);
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+      const newRefreshTokenUUID = 'new-refresh-token-uuid';
+      uuidServiceMock.generateUUID.mockReturnValue(newRefreshTokenUUID);
+      const newRefreshTokenHash = 'new-refresh-token-hash';
+      jest.spyOn(argon2, 'hash').mockResolvedValue(newRefreshTokenHash);
+      prismaServiceMock.userSessions.update.mockResolvedValue(mockUserSession);
+      // Act
+      const tokenPairResponse = await authService.generateToken(
+        mockRefreshTokenRequest,
+      );
+      // Assert
+      expect(prismaServiceMock.userSessions.findUnique).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(prismaServiceMock.userSessions.findUnique).toHaveBeenCalledWith({
+        where: {
+          sessionId: mockUserSession.sessionId,
+        },
+      });
+      expect(argon2.verify).toHaveBeenCalledTimes(1);
+      expect(argon2.verify).toHaveBeenCalledWith(
+        mockUserSession.refreshTokenHash,
+        mockRefreshTokenRequest.refreshToken,
+      );
+      expect(jwtMock.sign).toHaveBeenCalledTimes(1);
+      expect(jwtMock.sign).toHaveBeenCalledWith({
+        sub: mockUserSession.userId,
+        sid: mockUserSession.sessionId,
+      });
+      expect(uuidServiceMock.generateUUID).toHaveBeenCalledTimes(1);
+      expect(argon2.hash).toHaveBeenCalledTimes(1);
+      const expectedRefreshToken = `${mockUserSession.sessionId}.${newRefreshTokenUUID}`;
+      expect(argon2.hash).toHaveBeenCalledWith(expectedRefreshToken);
+      expect(prismaServiceMock.userSessions.update).toHaveBeenCalledTimes(1);
+      expect(prismaServiceMock.userSessions.update).toHaveBeenCalledWith({
+        data: {
+          refreshTokenHash: newRefreshTokenHash,
+        },
+        where: {
+          sessionId: mockUserSession.sessionId,
+        },
+      });
+      expect(tokenPairResponse).toEqual({
+        accessToken: mockTokenPair.accessToken,
+        refreshToken: expectedRefreshToken,
+        expiresAt: new Date(now + 15 * 60 * 1000),
       });
     });
   });
