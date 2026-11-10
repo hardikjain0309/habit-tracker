@@ -24,7 +24,8 @@ export let theme = createTheme({
       ].join(','),
       h1: {
         fontSize: '1.5em',
-        fontWeight: '300'
+        fontWeight: '300',
+        color: '#000004'
       },
       body1: {
         fontSize: '14px',
