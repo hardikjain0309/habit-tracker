@@ -48,7 +48,17 @@ theme = createTheme(theme, {
         }
       } 
     },
+    MuiLink: {
+      styleOverrides: {
+        root: {
+          color: theme.palette.primary.main
+        }
+      }
+    },
     MuiButton: {
+      defaultProps: {
+        disableElevation: true
+      },
       styleOverrides: {
         root: {
           textTransform: 'none',

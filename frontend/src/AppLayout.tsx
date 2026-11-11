@@ -1,4 +1,4 @@
-import { ThemeProvider } from "@emotion/react";
+import { ThemeProvider } from "@mui/material/styles";
 import Container from "@mui/material/Container";
 import { Outlet } from "react-router";
 import { theme } from "./theme";

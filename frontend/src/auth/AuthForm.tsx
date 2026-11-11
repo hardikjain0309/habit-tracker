@@ -94,7 +94,7 @@ function AuthForm({
           slotProps={{ inputLabel: { shrink: true } }}
         />
       </Stack>
-      <Button type="submit" size="small" variant="contained" disableElevation>
+      <Button type="submit" size="small" variant="contained">
         {submitLabel}
       </Button>
       <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
@@ -104,7 +104,7 @@ function AuthForm({
           to={footerLinkTo}
           variant="body1"
           underline="hover"
-          sx={{ color: "primary.main", fontWeight: 700 }}
+          sx={{ fontWeight: 700 }}
         >
           {footerLinkLabel}
         </Link>
