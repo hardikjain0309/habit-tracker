@@ -1,10 +1,12 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { TokenRequestDto, TokenResponseDto } from './auth.dto.js';
 import UserService from '../users/users.service.js';
 import argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UUIDService } from '../tools/uuid.service.js';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
+import { User } from '../prisma/generated/client.js';
 
 @Injectable()
 export default class AuthService {
@@ -33,12 +35,20 @@ export default class AuthService {
   private async generateTokenWithCreds(
     request: TokenRequestDto,
   ): Promise<TokenResponseDto> {
+    let user: User;
     // Get User from DB
-    const user = await this.userService.getUser(request.email);
+    try {
+      user = await this.userService.getUser(request.email!);
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new BadRequestException('Invalid username or password.');
+      }
+      throw new InternalServerErrorException('Unable to get user.');
+    }
     // Validate user creds from DB
     const isValidPassword = await argon2.verify(
       user.passwordHash,
-      request.password,
+      request.password!,
     );
     if (!isValidPassword) {
       throw new HttpException(
@@ -68,7 +78,7 @@ export default class AuthService {
   }
 
   private async refreshToken(request: TokenRequestDto) {
-    const sessionId = request.refreshToken.split('.')?.[0];
+    const sessionId = request.refreshToken?.split('.')?.[0];
     if (!sessionId) {
       throw new HttpException(
         'Unable to parse the provided refresh token.',
@@ -83,7 +93,7 @@ export default class AuthService {
     });
     if (
       !userSession ||
-      !(await argon2.verify(userSession.refreshTokenHash, request.refreshToken))
+      !(await argon2.verify(userSession.refreshTokenHash, request.refreshToken!))
     ) {
       throw new HttpException(
         'Invalid session or refresh token. Please login again.',

@@ -1,9 +1,13 @@
+import { useNavigate } from "react-router";
+import AuthService from "../api/AuthService";
 import AuthForm, { type AuthFormValues } from "../auth/AuthForm";
 
 function LoginPage() {
-  const handleSignIn = (values: AuthFormValues) => {
-    // TODO: integrate with auth API (password grant token endpoint)
-    console.info("Sign in submitted", { email: values.email });
+  const navigate = useNavigate();
+
+  const handleSignIn = async ({ email, password }: AuthFormValues) => {
+    await AuthService.login(email, password);
+    navigate("/home", { replace: true });
   };
 
   return (
